@@ -67,7 +67,7 @@ def estimate_loss(context_size, batch_size):
     return out
 
         
-model = CamoesGPT(vocab_size, context_size, n_embed, num_heads, num_layers, dropout)
+model = CamoesGPT(vocab_size, context_size, n_embed, num_heads, num_layers, dropout, device=device)
 model = model.to(device)
 optimizer = AdamW(model.parameters(), lr=learning_rate)
 
