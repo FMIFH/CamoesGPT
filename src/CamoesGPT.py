@@ -14,13 +14,10 @@ class CamoesGPT(nn.Module):
         self.token_embedding_table = nn.Embedding(vocab_size, n_embed)
         self.position_embedding_table = nn.Embedding(context_size, n_embed)
         
-        #self.sa_head = AttentionHead(n_embed,n_embed)
-        #self.sa_heads = MultiHeadedAttention(n_embed, n_embed//4 , 4)
-        #self.ffwd = FeedForward(n_embed)
-        
         self.blocks = nn.Sequential(
             *[Block(context_size, n_embed, num_heads, dropout) for _ in range(num_layers)]
         )
+        
         self.ln_f = nn.LayerNorm(n_embed)
         self.lm_head = nn.Linear(n_embed, vocab_size)
         

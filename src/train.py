@@ -3,7 +3,10 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch.optim import AdamW
 from CamoesGPT import CamoesGPT
+import os
+from matplotlib import pyplot as plt
 
+print(os.getcwd())
 
 from tqdm import tqdm
 
@@ -13,18 +16,19 @@ torch.manual_seed(42)
 batch_size = 64
 context_size = 256
 
-max_iters = 5000
+max_iters = 15000
 eval_interval = 500
-learning_rate = 5e-4
+learning_rate = 1e-4
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-eval_iters = 200
+print(device)
+eval_iters = 100
 
-n_embed = 384
-num_heads = 6
-num_layers= 6
-dropout=0.2
+n_embed = 128
+num_heads = 8
+num_layers= 16
+dropout=0.3
 
-max_new_tokens = 500
+max_new_tokens = 1000
 
 
 with open('Lusiadas/lusiadas.txt', 'r', encoding='ISO-8859-1') as f:
@@ -71,21 +75,40 @@ model = CamoesGPT(vocab_size, context_size, n_embed, num_heads, num_layers, drop
 model = model.to(device)
 optimizer = AdamW(model.parameters(), lr=learning_rate)
 
+print("Model's state_dict:")
+for param_tensor in model.state_dict():
+    print(param_tensor, "\t", model.state_dict()[param_tensor].size())
+
 total_params = sum(p.numel() for p in model.parameters())
 print(f"Number of parameters: {total_params}")
 
-for iter in tqdm(range(max_iters)):
+epoch_losses = {
+    'epoch' : range(0,max_iters+1,eval_iters),
+    'training' : [],
+    'valid' : []
+
+}
+for iter in tqdm(range(max_iters+1)):
     
     if iter % eval_interval == 0:
         losses = estimate_loss(context_size, batch_size)
-        print(f"step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
+        print(f"\nstep {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
+        torch.save(model, f"{os.getcwd()}/models/bigger_model2_{iter}_{int(losses['val']*1000)}.pt")
+        epoch_losses['training'].append(losses['train'])
+        epoch_losses['valid'].append(losses['val'])
+
     
     xb, yb = get_batch('train', context_size, batch_size)
     logits, loss = model(xb,yb)
     optimizer.zero_grad(set_to_none=True)
     loss.backward()
     optimizer.step()
-    
+
+plt.plot(epoch_losses['epoch'], epoch_losses['training'], label='train_loss')
+plt.plot(epoch_losses['epoch'], epoch_losses['valid'], label='val_loss')
+plt.legend()
+plt.savefig(f"{os.getcwd()}/plots/bigger_model2_training.png") 
+#plt.show()
     
 idx = torch.zeros((1,1), dtype=torch.long, device=device)
 response = model.generate(idx, max_new_tokens)
